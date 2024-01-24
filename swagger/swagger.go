@@ -1,13 +1,14 @@
 package swagger
 
 import (
-	"encoding/json"
 	"mime/multipart"
 	"net/http"
-	"reflect"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/goccy/go-json"
+	"github.com/goccy/go-reflect"
 
 	"github.com/fatih/structtag"
 	"github.com/getkin/kin-openapi/openapi3"
@@ -239,7 +240,7 @@ func (swagger *Swagger) getResponseSchemaByModel(model any) *openapi3.Schema {
 	schema := openapi3.NewObjectSchema()
 	if type_.Kind() == reflect.Struct {
 		for i := 0; i < type_.NumField(); i++ {
-			field := type_.Field(i)
+			field := reflect.ToReflectType(type_).Field(i)
 			if field.IsExported() && value_.IsValid() {
 				value := value_.Field(i)
 				if value.Kind() == reflect.Ptr {
@@ -340,7 +341,7 @@ func (swagger *Swagger) getResponses(response router.Response, contentType strin
 				Content:     content,
 				Headers:     v.Headers,
 			},
-		}) 
+		})
 	}
 	return ret
 }

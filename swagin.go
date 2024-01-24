@@ -2,10 +2,11 @@ package swagin
 
 import (
 	"embed"
-	"encoding/json"
 	"html/template"
 	"net/http"
 	"strings"
+
+	"github.com/goccy/go-json"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
