@@ -58,6 +58,8 @@ var schemaPool = sync.Pool{
 	},
 }
 
+var schemaCache sync.Map
+
 var fixPathRegex = regexp.MustCompile(":([a-zA-Z0-9_]+)")
 
 func New(title, description, version string, options ...Option) *Swagger {
@@ -128,6 +130,10 @@ func (swagger *Swagger) getSchemaByType(t any, request bool) *openapi3.Schema {
 	return schema
 }
 func (swagger *Swagger) getRequestSchemaByModel(model any) *openapi3.Schema {
+	if cachedSchema, ok := schemaCache.Load(reflect.TypeOf(model)); ok {
+		return cachedSchema.(*openapi3.Schema)
+	}
+
 	schema := schemaPool.Get().(*openapi3.Schema)
 	defer schemaPool.Put(schema)
 
@@ -222,6 +228,9 @@ func (swagger *Swagger) getRequestSchemaByModel(model any) *openapi3.Schema {
 	} else {
 		schema = swagger.getSchemaByType(value_.Interface(), true)
 	}
+
+	schemaCache.Store(reflect.TypeOf(model), schema)
+
 	return schema
 }
 func (swagger *Swagger) getRequestBodyByModel(model any, contentType string) *openapi3.RequestBodyRef {
@@ -240,6 +249,10 @@ func (swagger *Swagger) getRequestBodyByModel(model any, contentType string) *op
 	return body
 }
 func (swagger *Swagger) getResponseSchemaByModel(model any) *openapi3.Schema {
+	if cachedSchema, ok := schemaCache.Load(reflect.TypeOf(model)); ok {
+		return cachedSchema.(*openapi3.Schema)
+	}
+
 	schema := schemaPool.Get().(*openapi3.Schema)
 	defer schemaPool.Put(schema)
 
@@ -335,6 +348,7 @@ func (swagger *Swagger) getResponseSchemaByModel(model any) *openapi3.Schema {
 	} else {
 		schema = swagger.getSchemaByType(model, false)
 	}
+	schemaCache.Store(reflect.TypeOf(model), schema)
 	return schema
 }
 func (swagger *Swagger) getResponses(response router.Response, contentType string) *openapi3.Responses {
