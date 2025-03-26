@@ -7,12 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goccy/go-json"
-	"github.com/goccy/go-reflect"
-
 	"github.com/fatih/structtag"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/goccy/go-json"
+	"github.com/goccy/go-reflect"
 	"gopkg.in/yaml.v2"
 
 	"github.com/x-research-team/swagin/router"
@@ -105,7 +104,7 @@ func (swagger *Swagger) getSchemaByType(t any, request bool) *openapi3.Schema {
 		schema = openapi3.NewArraySchema()
 		schema.Items = &openapi3.SchemaRef{
 			Value: &openapi3.Schema{
-				Type:   "string",
+				Type:   &openapi3.Types{openapi3.TypeString},
 				Format: "binary",
 			},
 		}
@@ -497,10 +496,11 @@ func (swagger *Swagger) hasSchemaBody(requestBody *openapi3.RequestBodyRef) bool
 	if requestBody.Value.Content == nil {
 		return false
 	}
-	switch requestBody.Value.Content[binding.MIMEJSON].Schema.Value.Type {
-	case "object":
+
+	switch {
+	case requestBody.Value.Content[binding.MIMEJSON].Schema.Value.Type.Is(openapi3.TypeObject):
 		return len(requestBody.Value.Content[binding.MIMEJSON].Schema.Value.Properties) != 0
-	case "array":
+	case requestBody.Value.Content[binding.MIMEJSON].Schema.Value.Type.Is(openapi3.TypeArray):
 		return len(requestBody.Value.Content[binding.MIMEJSON].Schema.Value.Items.Value.Properties) != 0
 	}
 

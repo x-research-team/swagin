@@ -6,10 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/goccy/go-json"
-
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
+	"github.com/goccy/go-json"
 
 	"github.com/x-research-team/swagin/router"
 	"github.com/x-research-team/swagin/swagger"
@@ -104,28 +103,28 @@ func (g *SwaGin) GET(path string, r *router.Router) {
 	g.Handle(path, http.MethodGet, r)
 }
 
-func (g *SwaGin) POST(path string, router *router.Router) {
-	g.Handle(path, http.MethodPost, router)
+func (g *SwaGin) POST(path string, r *router.Router) {
+	g.Handle(path, http.MethodPost, r)
 }
 
-func (g *SwaGin) HEAD(path string, router *router.Router) {
-	g.Handle(path, http.MethodHead, router)
+func (g *SwaGin) HEAD(path string, r *router.Router) {
+	g.Handle(path, http.MethodHead, r)
 }
 
-func (g *SwaGin) PATCH(path string, router *router.Router) {
-	g.Handle(path, http.MethodPatch, router)
+func (g *SwaGin) PATCH(path string, r *router.Router) {
+	g.Handle(path, http.MethodPatch, r)
 }
 
-func (g *SwaGin) DELETE(path string, router *router.Router) {
-	g.Handle(path, http.MethodDelete, router)
+func (g *SwaGin) DELETE(path string, r *router.Router) {
+	g.Handle(path, http.MethodDelete, r)
 }
 
-func (g *SwaGin) PUT(path string, router *router.Router) {
-	g.Handle(path, http.MethodPut, router)
+func (g *SwaGin) PUT(path string, r *router.Router) {
+	g.Handle(path, http.MethodPut, r)
 }
 
-func (g *SwaGin) OPTIONS(path string, router *router.Router) {
-	g.Handle(path, http.MethodOptions, router)
+func (g *SwaGin) OPTIONS(path string, r *router.Router) {
+	g.Handle(path, http.MethodOptions, r)
 }
 
 func (g *SwaGin) init() {
