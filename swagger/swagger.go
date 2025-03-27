@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/fatih/structtag"
@@ -51,14 +50,6 @@ type Swagger struct {
 	SwaggerOptions map[string]any
 	RedocOptions   map[string]any
 }
-
-var schemaPool = sync.Pool{
-	New: func() any {
-		return openapi3.NewSchema()
-	},
-}
-
-var schemaCache sync.Map
 
 var fixPathRegex = regexp.MustCompile(":([a-zA-Z0-9_]+)")
 
@@ -130,12 +121,9 @@ func (swagger *Swagger) getSchemaByType(t any, request bool) *openapi3.Schema {
 	return schema
 }
 func (swagger *Swagger) getRequestSchemaByModel(model any) *openapi3.Schema {
-	if cachedSchema, ok := schemaCache.Load(reflect.TypeOf(model)); ok {
-		return cachedSchema.(*openapi3.Schema)
-	}
+	schema := openapi3.NewSchema()
 
-	schema := schemaPool.Get().(*openapi3.Schema)
-	defer schemaPool.Put(schema)
+	schema.Properties = make(map[string]*openapi3.SchemaRef)
 
 	type_ := reflect.TypeOf(model)
 	value_ := reflect.ValueOf(model)
@@ -149,7 +137,7 @@ func (swagger *Swagger) getRequestSchemaByModel(model any) *openapi3.Schema {
 		value_ = value_.Elem()
 	}
 	if type_.Kind() == reflect.Struct {
-		for i := 0; i < type_.NumField(); i++ {
+		for i := range type_.NumField() {
 			field := type_.Field(i)
 			value := value_.Field(i)
 			tags, err := structtag.Parse(string(field.Tag))
@@ -196,6 +184,9 @@ func (swagger *Swagger) getRequestSchemaByModel(model any) *openapi3.Schema {
 						}
 					}
 				}
+				if len(pattern) == 1 {
+					fieldSchema.Pattern = pattern[0]
+				}
 				isNonNilExists := isParamExist("nonnil", ruleTag.Name)
 				isNonZeroExists := isParamExist("nonzero", ruleTag.Name)
 				if !isNonNilExists || !isNonZeroExists {
@@ -215,6 +206,7 @@ func (swagger *Swagger) getRequestSchemaByModel(model any) *openapi3.Schema {
 			}
 			schema.Properties[tag.Name] = openapi3.NewSchemaRef("", fieldSchema)
 		}
+		schema.Type = &openapi3.Types{openapi3.TypeObject}
 	} else if type_.Kind() == reflect.Slice {
 		schema = openapi3.NewArraySchema()
 		if type_.Elem().Kind() == reflect.Ptr {
@@ -228,8 +220,6 @@ func (swagger *Swagger) getRequestSchemaByModel(model any) *openapi3.Schema {
 	} else {
 		schema = swagger.getSchemaByType(value_.Interface(), true)
 	}
-
-	schemaCache.Store(reflect.TypeOf(model), schema)
 
 	return schema
 }
@@ -245,16 +235,13 @@ func (swagger *Swagger) getRequestBodyByModel(model any, contentType string) *op
 	if contentType == "" {
 		contentType = binding.MIMEJSON
 	}
-	body.Value.Content = openapi3.NewContentWithSchema(schema, []string{contentType})
+	body.Value.WithSchema(schema, []string{contentType})
 	return body
 }
 func (swagger *Swagger) getResponseSchemaByModel(model any) *openapi3.Schema {
-	if cachedSchema, ok := schemaCache.Load(reflect.TypeOf(model)); ok {
-		return cachedSchema.(*openapi3.Schema)
-	}
+	schema := openapi3.NewSchema()
 
-	schema := schemaPool.Get().(*openapi3.Schema)
-	defer schemaPool.Put(schema)
+	schema.Properties = make(map[string]*openapi3.SchemaRef)
 
 	type_ := reflect.TypeOf(model)
 	value_ := reflect.ValueOf(model)
@@ -348,7 +335,6 @@ func (swagger *Swagger) getResponseSchemaByModel(model any) *openapi3.Schema {
 	} else {
 		schema = swagger.getSchemaByType(model, false)
 	}
-	schemaCache.Store(reflect.TypeOf(model), schema)
 	return schema
 }
 func (swagger *Swagger) getResponses(response router.Response, contentType string) *openapi3.Responses {
@@ -374,7 +360,7 @@ func (swagger *Swagger) getResponses(response router.Response, contentType strin
 }
 
 func params(key string, name string) []string {
-	for _, value := range strings.Split(name, ",") {
+	for value := range strings.SplitSeq(name, ",") {
 		if strings.HasPrefix(value, key+"=") {
 			return strings.Split(value[len(key+"="):], ",")
 		}
